@@ -58,10 +58,8 @@ def DFS(board, possible_values):
     #We try all possible values at this coordinate 
     #(we don't have to check) feasibility, because this is already done in find_least_empty
     for value in possible_values[x_coord][y_coord]:
-        breakpoint()
         board[x_coord][y_coord] = value #Update coordinate value
         update_possible_values(possible_values = possible_values, x_coord = x_coord, y_coord = y_coord, value = value)
-
         #Go one layer deeper and check if we are at a solution.
         if DFS(board, possible_values):
             return True
@@ -141,7 +139,7 @@ def find_least_empty(possible_values):
     least_values = 100 #Doesn't matter, as long as it's more than 10
     for row in range(9):
         for col in range(9):
-            if possible_values[row][col] is not None and len(possible_values[row][col]) < least_values:
+            if possible_values[row][col] and len(possible_values[row][col]) < least_values:
                 least_values = len(possible_values[row][col])
                 least_values_idx[0] = row
                 least_values_idx[1] = col
