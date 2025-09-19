@@ -36,3 +36,58 @@ def solve_row_column_grid(board, possible_values) -> bool:
     #At the end, return whether we actually changed anything
     #If we haven't changed anything anymore, we might need to use some more serious logic
     return any_change
+
+
+def solve_secondary_row(board, possible_values):
+    #Sometimes it's not sufficient to solve a sudoku game simply by checking row/col/grid logic
+    #Sometimes you need to additionally check whether within a grid there is a row/col 
+    #That MUST contain a certain value. This allows you to remove this value from the 
+    #corresponding row in the adjacent grids as well.
+    
+    #Logic for this is: Go through grids (1,1), (1, 2), (1,3), (2,1), ..., (3,3) and check for this situation
+    #If this situation is present for some number: For all grids with the same row/col number, 
+    #remove the value from possible_values in the corresponding row
+
+    grid_idx = [set(range(0, 2 + 1)), set(range(3, 5+1)), set(range(6, 8+1))]
+    any_change = False
+
+    asd = 3
+    #-------------Find a grid where a certain value is ONLY possible in a row or column------
+    for grid_x in range(3):
+        for grid_y in range(3):
+            for value in range(1, 10):
+                possible_positions = []
+                for row in grid_idx[grid_x]:
+                    for col in grid_idx[grid_y]:
+                        if possible_values[row][col] and value in possible_values[row][col]:
+                            possible_positions.append((row, col))
+            # Check if all possible positions are in the same row
+                rows = set(pos[0] for pos in possible_positions)
+                if len(rows) == 1:
+                    row = rows.pop()
+                    # Remove 'value' from the rest of the row, outside this grid
+                    for c in range(9):
+                        if c not in grid_idx[grid_y] and possible_values[row][c] and value in possible_values[row][c]:
+                            possible_values[row][c].remove(value)
+                            any_change = True
+
+                # Check if all possible positions are in the same column
+                cols = set(pos[1] for pos in possible_positions)
+                if len(cols) == 1:
+                    col = cols.pop()
+                    # Remove 'value' from the rest of the column, outside this grid
+                    for r in range(9):
+                        if r not in grid_idx[grid_x] and possible_values[r][col] and value in possible_values[r][col]:
+                            possible_values[r][col].remove(value)
+                            any_change = True
+
+    return any_change
+
+
+def solve_board(SudokuBoard):
+    #We want to apply our solving logic repeatedly until the board is full
+    #First we check whether the simple logic can make any change, if so, keep repeating
+    #If the simple logic (row/col/grid) cannot, then attempt the harder logic, circle back to see if now simpler logic works again
+    #At each step, we need to check if any of the possible_value entries contain 1 entry, and put that entry into the board!
+    #Finally, once the full board is filled, we want to stop.
+    asd = 3

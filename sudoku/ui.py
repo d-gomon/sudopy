@@ -1,12 +1,24 @@
 
-def play_game(SudokuBoard):
-    #We want the game to wait for user input as long as the sudoku puzzle is not solved
-    while SudokuBoard.solved == False:
-        SudokuBoard.print_board()
-        SudokuBoard.play_round()
-        
-
-
+def chooseGameType(SudokuBoard) -> bool:
+    #We can choose either of the 3 game types:
+    #1. Play a Sudoku Game (requires additional parameter after: difficulty)
+    #2. Solve a manually inputted sudoku board
+    #3. Generate Sudoku Board (not really a game)
+    while True:
+            try:
+                value = int(input("What would you like to do?\n"
+                "1. Play Sudoku Game\n"
+                "2. Solve a Sudoku Game (manual board input)\n"
+                "3. Generate a valid Sudoku Board\n"
+                "4. Quit\n"))
+                if 1 <= value <= 4:
+                    SudokuBoard.gametype = value
+                    return True
+                else:
+                    print("Please enter a value between {1} and {3}")
+            except ValueError:
+                print("Invalid input. Please enter a number between {1} and {3}")
+    
 
 def print_board(board):
     # Print the top border

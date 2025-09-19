@@ -2,6 +2,7 @@ import random
 from sudoku.ui import print_board
 from typing import List, Union, Optional
 import pdb
+import curses
 
 # Here we want to create a sudoku grid from scratch
 # To do so, we already need some functions to check whether the grid is
@@ -13,23 +14,57 @@ import pdb
 
 # The grids are indexed by 0-2, 3-5, 6-8 respectively
 
+def start_game(SudokuBoard):
+    if SudokuBoard.gametype == 1:
+        play_game(SudokuBoard)
+    elif SudokuBoard.gametype == 2:
+        curses.wrapper(lambda stdscr: get_board_input(stdscr, SudokuBoard))
+        solve_board(SudokuBoard)
+    elif SudokuBoard.gametype == 3:
+        createValidBoard(SudokuBoard)
+    elif SudokuBoard.gametype == 4:
+        exit()
+
+def play_game(SudokuBoard):
+    #We want the game to wait for user input as long as the sudoku puzzle is not solved
+    while SudokuBoard.solved == False:
+        SudokuBoard.print_board()
+        SudokuBoard.play_round()
+        
+
+def get_board_input(stdscr, SudokuBoard):
+    #Need to allow the user to input the sudokuboard. Would be nice if could be done using arrows.
+    stdscr.clear()
+    SudokuBoard.input_board(stdscr)
+
+
+
+def solve_board(SudokuBoard):
+    
+    SudokuBoard.solved = False
 
 
 def createValidBoard(sudokuBoard):
-    #-----------Initialize the board, possible values and grid---------------
-    board = [[None for i in range(sudokuBoard.size)] for j in range(sudokuBoard.size)] #size x size board initialization
-    possible_values = [[list(range(1, sudokuBoard.size + 1)) for i in range(sudokuBoard.size)] for j in range(sudokuBoard.size)]  
+    #We may hit recursion limit, so we just try with different seed
+    while True:
+        try:
+            #-----------Initialize the board, possible values and grid---------------
+            board = [[None for i in range(sudokuBoard.size)] for j in range(sudokuBoard.size)] #size x size board initialization
+            possible_values = [[list(range(1, sudokuBoard.size + 1)) for i in range(sudokuBoard.size)] for j in range(sudokuBoard.size)]  
+            random.seed()
+            #-------------DFS with backtracking-------------
+            if DFS(board=board, possible_values=possible_values):
+                break
+        except RecursionError:
+            print("Recursion limit hit. Retrying...")
     
-    #-------------DFS with backtracking-------------
-    DFS(board=board, possible_values=possible_values)
-
     #Assign solution to our sudokuBoard.
     sudokuBoard.board = board
+    print_board(board)
     
 
 
 def DFS(board, possible_values):
-    print_board(board)
     #Seeing as doing a greedy approach might yield non-feasible board, we use 
     #Depth First Search with backtracking.
 
@@ -52,7 +87,10 @@ def DFS(board, possible_values):
     x_coord, y_coord = find_least_empty(possible_values)
     #If such a coordinate doesn't exist, we are done
     if x_coord is None:
-        return True
+        if is_board_filled(board):
+            return True
+        else:
+            return False
     
     random.shuffle(possible_values[x_coord][y_coord])
     #We try all possible values at this coordinate 
@@ -91,7 +129,7 @@ def update_possible_values(possible_values, x_coord, y_coord, value):
     grid_y = y_coord//3
     for grid_row in grid_idx[grid_x]:
         for grid_col in grid_idx[grid_y]:
-            if possible_values[grid_row][grid_col] is not None and value in possible_values[grid_row][grid_col]:
+            if possible_values[grid_row][grid_col] and value in possible_values[grid_row][grid_col]:
                 possible_values[grid_row][grid_col].remove(value)
 
 def reverse_possible_values(possible_values, x_coord, y_coord, value, board):
@@ -128,7 +166,7 @@ def reverse_possible_values(possible_values, x_coord, y_coord, value, board):
     grid_y = y_coord//3
     for grid_row in grid_idx[grid_x]:
         for grid_col in grid_idx[grid_y]:
-            if value not in possible_values[grid_row][grid_col] and possible_values[grid_row][grid_col] is not None:
+            if value not in possible_values[grid_row][grid_col] and possible_values[grid_row][grid_col]:
                 possible_values[grid_row][grid_col].append(value)
 
 
@@ -144,3 +182,10 @@ def find_least_empty(possible_values):
                 least_values_idx[0] = row
                 least_values_idx[1] = col
     return least_values_idx
+
+def is_board_filled(board):
+    for row in range(9):
+        for col in range(9):
+            if board[row][col] is None:
+                return False
+    return True
