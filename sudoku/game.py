@@ -33,6 +33,7 @@ class SudokuBoard():
     def input_board(self, stdscr):
         """Allows the user to input a Sudoku board using arrow keys and number pad."""
         stdscr.clear()
+        stdscr.keypad(True)
         stdscr.addstr(0, 0, "Use arrow keys to move, number keys to input, '0' to clear, 'q' to quit.")
         stdscr.addstr(1, 0, "Press 'Enter' to confirm your board.")
 
@@ -57,6 +58,7 @@ class SudokuBoard():
 
             # Get user input
             key = stdscr.getch()
+            stdscr.addstr(10, 0, f"Key pressed: {key}")
 
             # Handle arrow keys
             if key == curses.KEY_UP and row > 0:

@@ -16,6 +16,10 @@ def solve_row_column_grid(board, possible_values) -> bool:
     for x_coord in range(9):
         for y_coord in range(9):
             value = board[x_coord][y_coord]
+            #First set possible_values to None where there already is a value
+            if value:
+                possible_values[x_coord][y_coord] = None
+            #Remove from ROWS:
             for col in range(9):
                 if possible_values[x_coord][col] and value in possible_values[x_coord][col]:
                     possible_values[x_coord][col].remove(value)
@@ -51,7 +55,6 @@ def solve_secondary_row(board, possible_values):
     grid_idx = [set(range(0, 2 + 1)), set(range(3, 5+1)), set(range(6, 8+1))]
     any_change = False
 
-    asd = 3
     #-------------Find a grid where a certain value is ONLY possible in a row or column------
     for grid_x in range(3):
         for grid_y in range(3):
@@ -80,14 +83,38 @@ def solve_secondary_row(board, possible_values):
                         if r not in grid_idx[grid_x] and possible_values[r][col] and value in possible_values[r][col]:
                             possible_values[r][col].remove(value)
                             any_change = True
-
+    #Did we make any change by using this logic?
     return any_change
 
 
-def solve_board(SudokuBoard):
+def fill_unique_possibilities(board, possible_values):
+    #Fill board with the unique possible values in possible_values
+    for x_coord in range(9):
+        for y_coord in range(9):
+            if possible_values[x_coord][y_coord] and len(possible_values[x_coord][y_coord]) == 1:
+                value = possible_values[x_coord][y_coord].pop()
+                board[x_coord][y_coord] = value
+
+def solve_board_internal(SudokuBoard):
     #We want to apply our solving logic repeatedly until the board is full
     #First we check whether the simple logic can make any change, if so, keep repeating
     #If the simple logic (row/col/grid) cannot, then attempt the harder logic, circle back to see if now simpler logic works again
     #At each step, we need to check if any of the possible_value entries contain 1 entry, and put that entry into the board!
     #Finally, once the full board is filled, we want to stop.
-    asd = 3
+
+    possible_values = [[list(range(1, SudokuBoard.size + 1)) for i in range(SudokuBoard.size)] for j in range(SudokuBoard.size)]  
+
+    while SudokuBoard.solved == False:
+        progress_made = False
+        while solve_row_column_grid(SudokuBoard.board, possible_values=possible_values):
+            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
+            progress_made = True
+        while solve_secondary_row(SudokuBoard.board, possible_values=possible_values):
+            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
+            progress_made = True
+        if SudokuBoard.is_board_filled():
+            SudokuBoard.solved = True
+        if not progress_made:
+            print("Could not solve this sudoku! Either too hard or not enough info! Printing final board:")
+            break
+        SudokuBoard.print_board()

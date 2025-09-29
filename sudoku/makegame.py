@@ -1,5 +1,6 @@
 import random
 from sudoku.ui import print_board
+from sudoku.solver import solve_board_internal
 from typing import List, Union, Optional
 import pdb
 import curses
@@ -40,17 +41,20 @@ def get_board_input(stdscr, SudokuBoard):
 
 
 def solve_board(SudokuBoard):
-    
-    SudokuBoard.solved = False
+    print("Original board:")
+    SudokuBoard.print_board()
+    solve_board_internal(SudokuBoard=SudokuBoard)
+    print("Solved board:")
+    SudokuBoard.print_board()
 
 
-def createValidBoard(sudokuBoard):
+def createValidBoard(SudokuBoard):
     #We may hit recursion limit, so we just try with different seed
     while True:
         try:
             #-----------Initialize the board, possible values and grid---------------
-            board = [[None for i in range(sudokuBoard.size)] for j in range(sudokuBoard.size)] #size x size board initialization
-            possible_values = [[list(range(1, sudokuBoard.size + 1)) for i in range(sudokuBoard.size)] for j in range(sudokuBoard.size)]  
+            board = [[None for i in range(SudokuBoard.size)] for j in range(SudokuBoard.size)] #size x size board initialization
+            possible_values = [[list(range(1, SudokuBoard.size + 1)) for i in range(SudokuBoard.size)] for j in range(SudokuBoard.size)]  
             random.seed()
             #-------------DFS with backtracking-------------
             if DFS(board=board, possible_values=possible_values):
@@ -59,7 +63,7 @@ def createValidBoard(sudokuBoard):
             print("Recursion limit hit. Retrying...")
     
     #Assign solution to our sudokuBoard.
-    sudokuBoard.board = board
+    SudokuBoard.board = board
     print_board(board)
     
 
