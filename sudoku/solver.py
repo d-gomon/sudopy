@@ -1,3 +1,5 @@
+from collections import Counter
+
 #Here we program the solver logic.
 #When we are solving, we only get the board as input, and the possible values we have determined up until now
 
@@ -16,27 +18,31 @@ def solve_row_column_grid(board, possible_values) -> bool:
     for x_coord in range(9):
         for y_coord in range(9):
             value = board[x_coord][y_coord]
-            #First set possible_values to None where there already is a value
+            #First set possible_values to only that value where there already is a value
             if value:
-                possible_values[x_coord][y_coord] = None
+                possible_values[x_coord][y_coord] = [value]
+            
             #Remove from ROWS:
             for col in range(9):
-                if possible_values[x_coord][col] and value in possible_values[x_coord][col]:
+                if possible_values[x_coord][col] and col is not y_coord and value in possible_values[x_coord][col]:
                     possible_values[x_coord][col].remove(value)
                     any_change = True
+            
             #Remove from COLUMNS:
             for row in range(9):
-                if possible_values[row][y_coord] and value in possible_values[row][y_coord]:
+                if possible_values[row][y_coord] and row is not x_coord and value in possible_values[row][y_coord]:
                     possible_values[row][y_coord].remove(value)
                     any_change = True
+            
             #Remove from nearby grid:
             grid_x = x_coord//3
             grid_y = y_coord//3
             for grid_row in grid_idx[grid_x]:
                 for grid_col in grid_idx[grid_y]:
-                    if possible_values[grid_row][grid_col] is not None and value in possible_values[grid_row][grid_col]:
+                    if possible_values[grid_row][grid_col] is not None and grid_row is not x_coord and grid_col is not y_coord and value in possible_values[grid_row][grid_col]:
                         possible_values[grid_row][grid_col].remove(value)
                         any_change = True
+        
     #At the end, return whether we actually changed anything
     #If we haven't changed anything anymore, we might need to use some more serious logic
     return any_change
@@ -86,6 +92,40 @@ def solve_secondary_row(board, possible_values):
     #Did we make any change by using this logic?
     return any_change
 
+def check_grids(board, possible_values):
+    #In each grid, we want to check which unique numbers are still possible. 
+    #If a number is only possible in one of the empty coordinates, it must be there
+
+    
+    grid_idx = [set(range(0, 2 + 1)), set(range(3, 5+1)), set(range(6, 8+1))]
+    grid_idx_slice = [slice(0, 2 + 1), slice(3, 5+1), slice(6, 8+1)]
+    any_change = False
+
+    for grid_x in range(3):
+        for grid_y in range(3):
+            #possible_numbers = set(board[grid_idx[grid_x]][grid_idx[grid_y]])
+            #Which unique numbers are still possible in each grid (and not taken up in board yet)?
+            #breakpoint()
+            already_filled_numbers = {num for row in board[grid_idx_slice[grid_x]] for num in row[grid_idx_slice[grid_y]]}
+            already_filled_numbers.discard(None)
+            grid_unique_numbers = {x for x in range(1,10) if x not in already_filled_numbers}
+            grid_possible_numbers = [num for row in possible_values[grid_idx_slice[grid_x]] for num in row[grid_idx_slice[grid_y]]]
+            flattened = [num for sublist in grid_possible_numbers for num in sublist if num in grid_unique_numbers]
+            counts = Counter(flattened)
+            unique_numbers = [num for num, count in counts.items() if count == 1]
+            if unique_numbers:
+                for unique_num in unique_numbers:
+                    for x_coord in grid_idx[grid_x]:
+                        for y_coord in grid_idx[grid_y]:
+                            if board[x_coord][y_coord] is None and unique_num in possible_values[x_coord][y_coord]:
+                                possible_values[x_coord][y_coord] = [unique_num]
+                                any_change = True
+    #Did we change anything by running this function?
+    return any_change
+
+
+            
+
 
 def fill_unique_possibilities(board, possible_values):
     #Fill board with the unique possible values in possible_values
@@ -108,9 +148,16 @@ def solve_board_internal(SudokuBoard):
         progress_made = False
         while solve_row_column_grid(SudokuBoard.board, possible_values=possible_values):
             fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
+            print("simple logic1")
             progress_made = True
         while solve_secondary_row(SudokuBoard.board, possible_values=possible_values):
             fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
+            print("Secondary logic")
+            progress_made = True
+        while check_grids(SudokuBoard.board, possible_values=possible_values):
+            breakpoint()
+            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
+            print("grid logic")
             progress_made = True
         if SudokuBoard.is_board_filled():
             SudokuBoard.solved = True
