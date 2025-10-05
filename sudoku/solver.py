@@ -18,19 +18,18 @@ def solve_row_column_grid(board, possible_values) -> bool:
     for x_coord in range(9):
         for y_coord in range(9):
             value = board[x_coord][y_coord]
-            #First set possible_values to only that value where there already is a value
-            if value:
-                possible_values[x_coord][y_coord] = [value]
+            if not value:
+                continue #skip empty cells
             
             #Remove from ROWS:
             for col in range(9):
-                if possible_values[x_coord][col] and col is not y_coord and value in possible_values[x_coord][col]:
+                if col != y_coord and value in possible_values[x_coord][col]:
                     possible_values[x_coord][col].remove(value)
                     any_change = True
             
             #Remove from COLUMNS:
             for row in range(9):
-                if possible_values[row][y_coord] and row is not x_coord and value in possible_values[row][y_coord]:
+                if row != x_coord and value in possible_values[row][y_coord]:
                     possible_values[row][y_coord].remove(value)
                     any_change = True
             
@@ -39,7 +38,7 @@ def solve_row_column_grid(board, possible_values) -> bool:
             grid_y = y_coord//3
             for grid_row in grid_idx[grid_x]:
                 for grid_col in grid_idx[grid_y]:
-                    if possible_values[grid_row][grid_col] is not None and grid_row is not x_coord and grid_col is not y_coord and value in possible_values[grid_row][grid_col]:
+                    if possible_values[grid_row][grid_col] and not (grid_row == x_coord and grid_col == y_coord) and value in possible_values[grid_row][grid_col]:
                         possible_values[grid_row][grid_col].remove(value)
                         any_change = True
         
@@ -64,12 +63,15 @@ def solve_secondary_row(board, possible_values):
     #-------------Find a grid where a certain value is ONLY possible in a row or column------
     for grid_x in range(3):
         for grid_y in range(3):
+            #At this point we are in a single grid, defined by grid_idx[grid_x] and grid_idx[grid_y]
             for value in range(1, 10):
                 possible_positions = []
                 for row in grid_idx[grid_x]:
                     for col in grid_idx[grid_y]:
                         if possible_values[row][col] and value in possible_values[row][col]:
                             possible_positions.append((row, col))
+                if len(possible_positions) < 2:
+                    continue  # skip single or empty cases
             # Check if all possible positions are in the same row
                 rows = set(pos[0] for pos in possible_positions)
                 if len(rows) == 1:
@@ -124,7 +126,64 @@ def check_grids(board, possible_values):
     return any_change
 
 
-            
+
+def check_rows_cols(board, possible_values):
+    #Check if any of the rows/columns have a missing value which is only possible at a single coordinate
+    any_change = False
+
+    # --- Check rows ---
+    for row_num in range(9):
+        already_filled = {val for val in board[row_num] if val is not None}
+        missing = {n for n in range(1, 10) if n not in already_filled}
+
+        # Collect all candidates for missing numbers in this row
+        row_candidates = []
+        for col_num in range(9):
+            if board[row_num][col_num] is None:
+                for num in possible_values[row_num][col_num]:
+                    if num in missing:
+                        row_candidates.append(num)
+
+        counts = Counter(row_candidates)
+        unique_nums = [num for num, c in counts.items() if c == 1]
+
+        # Assign unique values
+        for unique_num in unique_nums:
+            for col_num in range(9):
+                if (
+                    board[row_num][col_num] is None
+                    and unique_num in possible_values[row_num][col_num]
+                ):
+                    possible_values[row_num][col_num] = [unique_num]
+                    any_change = True
+
+    # --- Check columns ---
+    for col_num in range(9):
+        already_filled = {board[row][col_num] for row in range(9) if board[row][col_num] is not None}
+        missing = {n for n in range(1, 10) if n not in already_filled}
+
+        col_candidates = []
+        for row_num in range(9):
+            if board[row_num][col_num] is None:
+                for num in possible_values[row_num][col_num]:
+                    if num in missing:
+                        col_candidates.append(num)
+
+        counts = Counter(col_candidates)
+        unique_nums = [num for num, c in counts.items() if c == 1]
+
+        # Assign unique values
+        for unique_num in unique_nums:
+            for row_num in range(9):
+                if (
+                    board[row_num][col_num] is None
+                    and unique_num in possible_values[row_num][col_num]
+                ):
+                    possible_values[row_num][col_num] = [unique_num]
+                    any_change = True
+
+    return any_change
+
 
 
 def fill_unique_possibilities(board, possible_values):
@@ -134,6 +193,14 @@ def fill_unique_possibilities(board, possible_values):
             if possible_values[x_coord][y_coord] and len(possible_values[x_coord][y_coord]) == 1:
                 value = possible_values[x_coord][y_coord].pop()
                 board[x_coord][y_coord] = value
+                print(f"Value {value} input in coordinate ({x_coord + 1}, {y_coord + 1})")
+
+def board_to_possible_values(board, possible_values):
+    #Input non-empty board values into possible_values
+    for x_coord in range(9):
+        for y_coord in range(9):
+            if board[x_coord][y_coord]:
+                possible_values[x_coord][y_coord] = [board[x_coord][y_coord]]
 
 def solve_board_internal(SudokuBoard):
     #We want to apply our solving logic repeatedly until the board is full
@@ -142,22 +209,33 @@ def solve_board_internal(SudokuBoard):
     #At each step, we need to check if any of the possible_value entries contain 1 entry, and put that entry into the board!
     #Finally, once the full board is filled, we want to stop.
 
-    possible_values = [[list(range(1, SudokuBoard.size + 1)) for i in range(SudokuBoard.size)] for j in range(SudokuBoard.size)]  
+    possible_values = [[list(range(1, SudokuBoard.size + 1)) for i in range(SudokuBoard.size)] for j in range(SudokuBoard.size)]
+
+    #Make sure possible_values is updated with 
+    board_to_possible_values(SudokuBoard.board, possible_values)  
+
+    #First we update the coordinates where the board is already filled to match possible_values
 
     while SudokuBoard.solved == False:
         progress_made = False
         while solve_row_column_grid(SudokuBoard.board, possible_values=possible_values):
-            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
             print("simple logic1")
+            #breakpoint()
+            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
             progress_made = True
         while solve_secondary_row(SudokuBoard.board, possible_values=possible_values):
-            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
             print("Secondary logic")
+            #breakpoint()
+            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
             progress_made = True
         while check_grids(SudokuBoard.board, possible_values=possible_values):
-            breakpoint()
-            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
             print("grid logic")
+            #breakpoint()
+            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
+            progress_made = True
+        while check_rows_cols(SudokuBoard.board, possible_values=possible_values):
+            print("row/col logic")
+            fill_unique_possibilities(SudokuBoard.board, possible_values=possible_values)
             progress_made = True
         if SudokuBoard.is_board_filled():
             SudokuBoard.solved = True
